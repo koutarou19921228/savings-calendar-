@@ -498,7 +498,7 @@
             return {
                 bg: 'repeating-linear-gradient(-45deg, #fef2f2 0px, #fef2f2 6px, #ffffff 6px, #ffffff 12px)',
                 border: '#fca5a5',
-                textColor: '#dc2626'
+                textColor: '#1f2937'
             };
         }
 
@@ -542,7 +542,7 @@
             const { ctx, chartArea } = chart;
             const cx = (chartArea.left + chartArea.right) / 2;
             const cy = (chartArea.top + chartArea.bottom) / 2;
-            const pct = Math.min(100, currentProgress);
+            const pct = Math.max(0, Math.min(100, currentProgress));
 
             ctx.save();
             ctx.font = 'bold 30px sans-serif';
@@ -703,7 +703,7 @@
 
         document.getElementById('modalDate').textContent =
             `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
-        document.getElementById('amountInput').value = data?.amount || '';
+        document.getElementById('amountInput').value = '';
         document.getElementById('memoInput').value   = data?.memo   || '';
         document.getElementById('deleteBtn').style.display = data ? 'block' : 'none';
         document.getElementById('saveStatus').textContent = '';
