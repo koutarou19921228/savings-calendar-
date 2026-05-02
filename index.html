@@ -346,7 +346,7 @@
             <form id="dataForm">
                 <div class="form-group">
                     <label for="amountInput">節約できた金額</label>
-                    <input type="number" id="amountInput" placeholder="0" min="0" required>
+                    <input type="number" id="amountInput" placeholder="0" required>
                 </div>
                 <div class="form-group">
                     <label for="memoInput">メモ（任意）</label>
@@ -492,7 +492,17 @@
 
     // ── Amount-based cell color ───────────────────────────
     function getAmountStyle(amount) {
-        if (!amount || amount < 100) return null;
+        if (amount == null || amount === '') return null;
+
+        if (amount < 0) {
+            return {
+                bg: 'repeating-linear-gradient(-45deg, #fef2f2 0px, #fef2f2 6px, #ffffff 6px, #ffffff 12px)',
+                border: '#fca5a5',
+                textColor: '#dc2626'
+            };
+        }
+
+        if (amount < 100) return null;
 
         if (amount < 500) {
             const t = (amount - 100) / 400;
@@ -657,7 +667,14 @@
             if (dayData) {
                 cell.classList.add('has-data');
                 const s = getAmountStyle(dayData.amount);
-                if (s) { cell.style.background = s.bg; cell.style.borderColor = s.border; }
+                if (s) {
+                    cell.style.background = s.bg;
+                    cell.style.borderColor = s.border;
+                    if (s.textColor) {
+                        cell.style.color = s.textColor;
+                        cell.querySelector('.day-number') && (cell.querySelector('.day-number').style.color = s.textColor);
+                    }
+                }
             }
 
             const num = document.createElement('div');
@@ -704,7 +721,7 @@
         const amount = document.getElementById('amountInput').value;
         const memo   = document.getElementById('memoInput').value;
 
-        if (!amount || Number(amount) <= 0) {
+        if (amount === '' || amount === null || amount === undefined) {
             alert('金額を入力してください');
             return;
         }
