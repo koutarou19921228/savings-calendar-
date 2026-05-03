@@ -280,6 +280,45 @@
             color: #10b981;
             transition: opacity 0.5s;
         }
+
+        /* ── History list ── */
+        .history-list {
+            display: none;
+            margin-top: 16px;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 12px;
+        }
+        .history-list.visible { display: block; }
+        .history-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #9ca3af;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .history-time { font-size: 11px; color: #9ca3af; min-width: 36px; }
+        .history-amount { font-size: 13px; font-weight: 700; color: #10b981; min-width: 72px; }
+        .history-amount.neg { color: #dc2626; }
+        .history-memo { flex: 1; font-size: 12px; color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .history-del {
+            background: none; border: none; color: #d1d5db;
+            cursor: pointer; font-size: 18px; line-height: 1;
+            padding: 2px 5px; border-radius: 4px; flex-shrink: 0;
+        }
+        .history-del:hover { color: #ef4444; background: #fee2e2; }
+        .history-total {
+            font-size: 13px; font-weight: 700; color: #374151;
+            text-align: right; margin-top: 10px; padding-top: 8px;
+            border-top: 2px solid #e5e7eb;
+        }
     </style>
 </head>
 <body>
@@ -363,6 +402,11 @@
                 <button class="btn btn-cancel" id="cancelBtn">キャンセル</button>
             </div>
             <div class="save-status" id="saveStatus"></div>
+            <div class="history-list" id="historyList">
+                <div class="history-label">この日の入力履歴</div>
+                <div id="historyItems"></div>
+                <div class="history-total" id="historyTotal"></div>
+            </div>
         </div>
     </div>
 
@@ -474,18 +518,55 @@
     }
 
     function getDayData(date) {
-        return getMonthData(date).days[getDateKey(date)];
+        const raw = getMonthData(date).days[getDateKey(date)];
+        if (!raw) return null;
+        // 旧形式（entries なし）を新形式に変換して返す
+        if (!raw.entries) {
+            return { amount: raw.amount, entries: [{ amount: raw.amount, memo: raw.memo || '', time: '' }] };
+        }
+        return raw;
     }
 
     function addDayData(date, amount, memo) {
         const monthData = getMonthData(date);
         const dateKey = getDateKey(date);
-        const existing = monthData.days[dateKey];
+        const raw = monthData.days[dateKey];
         const newAmount = parseInt(amount, 10);
+        const now = new Date();
+        const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        const newEntry = { amount: newAmount, memo: memo || '', time: timeStr };
+
+        let entries;
+        if (raw) {
+            entries = raw.entries
+                ? [...raw.entries]
+                : [{ amount: raw.amount, memo: raw.memo || '', time: '' }];
+            entries.push(newEntry);
+        } else {
+            entries = [newEntry];
+        }
+
         monthData.days[dateKey] = {
-            amount: existing ? existing.amount + newAmount : newAmount,
-            memo: memo || (existing ? existing.memo : '')
+            amount: entries.reduce((sum, e) => sum + e.amount, 0),
+            entries
         };
+        saveMonthData(date, monthData);
+    }
+
+    function deleteEntry(date, idx) {
+        const monthData = getMonthData(date);
+        const dateKey = getDateKey(date);
+        const raw = monthData.days[dateKey];
+        if (!raw) return;
+        const entries = raw.entries
+            ? [...raw.entries]
+            : [{ amount: raw.amount, memo: raw.memo || '', time: '' }];
+        entries.splice(idx, 1);
+        if (entries.length === 0) {
+            delete monthData.days[dateKey];
+        } else {
+            monthData.days[dateKey] = { amount: entries.reduce((sum, e) => sum + e.amount, 0), entries };
+        }
         saveMonthData(date, monthData);
     }
 
@@ -698,6 +779,32 @@
     }
 
     // ── Modal ─────────────────────────────────────────────
+    function renderHistoryList(date) {
+        const data = getDayData(date);
+        const list  = document.getElementById('historyList');
+        const items = document.getElementById('historyItems');
+        const total = document.getElementById('historyTotal');
+        items.innerHTML = '';
+
+        if (!data || !data.entries || data.entries.length === 0) {
+            list.classList.remove('visible');
+            return;
+        }
+        list.classList.add('visible');
+        data.entries.forEach((entry, idx) => {
+            const div = document.createElement('div');
+            div.className = 'history-item';
+            div.innerHTML = `
+                <span class="history-time">${entry.time || '--:--'}</span>
+                <span class="history-amount ${entry.amount < 0 ? 'neg' : ''}">${entry.amount >= 0 ? '+' : ''}¥${entry.amount.toLocaleString()}</span>
+                <span class="history-memo">${entry.memo || ''}</span>
+                <button class="history-del" data-idx="${idx}" title="この項目を削除">×</button>
+            `;
+            items.appendChild(div);
+        });
+        total.textContent = `合計 ¥${data.amount.toLocaleString()}`;
+    }
+
     function openModal(date) {
         selectedDate = new Date(date);
         const data = getDayData(date);
@@ -705,9 +812,10 @@
         document.getElementById('modalDate').textContent =
             `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
         document.getElementById('amountInput').value = '';
-        document.getElementById('memoInput').value   = data?.memo   || '';
+        document.getElementById('memoInput').value   = '';
         document.getElementById('deleteBtn').style.display = data ? 'block' : 'none';
         document.getElementById('saveStatus').textContent = '';
+        renderHistoryList(date);
         document.getElementById('modal').classList.add('active');
         setTimeout(() => document.getElementById('amountInput').focus(), 50);
     }
@@ -735,15 +843,19 @@
         addDayData(selectedDate, amount, memo);
         renderCalendar();
         updateGoalDisplay();
+        renderHistoryList(selectedDate);
 
-        // Wait for GAS save (already fire-and-forget in saveMonthData, but give UI feedback)
+        // 入力欄をリセットして連続入力しやすくする
+        document.getElementById('amountInput').value = '';
+        document.getElementById('memoInput').value   = '';
+        document.getElementById('deleteBtn').style.display = 'block';
+
         await new Promise(r => setTimeout(r, useGAS ? 600 : 0));
 
         saveBtn.disabled = false;
         saveBtn.textContent = '保存';
         isSaving = false;
-
-        closeModal();
+        document.getElementById('amountInput').focus();
     }
 
     async function deleteData() {
@@ -787,6 +899,17 @@
 
     document.getElementById('amountInput').addEventListener('keypress', e => {
         if (e.key === 'Enter') saveData();
+    });
+
+    document.getElementById('historyItems').addEventListener('click', e => {
+        const btn = e.target.closest('.history-del');
+        if (!btn || !selectedDate) return;
+        deleteEntry(selectedDate, parseInt(btn.dataset.idx));
+        renderHistoryList(selectedDate);
+        renderCalendar();
+        updateGoalDisplay();
+        const data = getDayData(selectedDate);
+        document.getElementById('deleteBtn').style.display = data ? 'block' : 'none';
     });
 
     document.getElementById('modal').addEventListener('click', e => {
