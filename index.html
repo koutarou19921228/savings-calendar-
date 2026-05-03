@@ -129,6 +129,7 @@
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
             gap: 15px;
+            min-width: 0;
         }
         .stat-item { text-align: center; }
         .stat-label { font-size: 12px; color: #666; margin-bottom: 5px; text-transform: uppercase; }
@@ -137,7 +138,7 @@
         .stat-value.achieved { color: #10b981; }
         .stat-value.remaining { color: #f59e0b; }
 
-        .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; min-width: 0; }
         @media (max-width: 768px) { .charts { grid-template-columns: 1fr; } }
 
         .chart-container {
@@ -146,6 +147,8 @@
             background: #f8f9fa;
             border-radius: 10px;
             padding: 20px;
+            min-width: 0;
+            overflow: hidden;
         }
 
         /* ── Calendar ── */
