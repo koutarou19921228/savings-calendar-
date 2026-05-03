@@ -185,6 +185,10 @@
         .calendar-day.has-data .day-amount { color: white; font-weight: bold; }
         .calendar-day.today { border-color: #10b981; background: #ecfdf5; border-width: 2px; }
         .calendar-day.today.has-data { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+        /* マイナスセル：白ハッチング・黒文字・赤金額 */
+        .calendar-day.has-data.minus { background: repeating-linear-gradient(-45deg, #fef2f2 0px, #fef2f2 6px, #ffffff 6px, #ffffff 12px); border-color: #fca5a5; color: #1f2937; }
+        .calendar-day.has-data.minus .day-number { color: #1f2937; }
+        .calendar-day.has-data.minus .day-amount { color: #dc2626; }
 
         .day-number { font-size: 12px; font-weight: bold; color: #333; }
         .day-amount { font-size: 11px; font-weight: 700; color: #667eea; text-align: right; white-space: nowrap; }
@@ -475,7 +479,13 @@
 
     function addDayData(date, amount, memo) {
         const monthData = getMonthData(date);
-        monthData.days[getDateKey(date)] = { amount: parseInt(amount, 10), memo: memo || '' };
+        const dateKey = getDateKey(date);
+        const existing = monthData.days[dateKey];
+        const newAmount = parseInt(amount, 10);
+        monthData.days[dateKey] = {
+            amount: existing ? existing.amount + newAmount : newAmount,
+            memo: memo || (existing ? existing.memo : '')
+        };
         saveMonthData(date, monthData);
     }
 
@@ -494,13 +504,7 @@
     function getAmountStyle(amount) {
         if (amount == null || amount === '') return null;
 
-        if (amount < 0) {
-            return {
-                bg: 'repeating-linear-gradient(-45deg, #fef2f2 0px, #fef2f2 6px, #ffffff 6px, #ffffff 12px)',
-                border: '#fca5a5',
-                textColor: '#1f2937'
-            };
-        }
+        if (amount < 0) return null;  // マイナスは CSS .minus クラスで対応
 
         if (amount < 100) return null;
 
@@ -666,14 +670,11 @@
             const dayData = getDayData(dayDate);
             if (dayData) {
                 cell.classList.add('has-data');
-                const s = getAmountStyle(dayData.amount);
-                if (s) {
-                    cell.style.background = s.bg;
-                    cell.style.borderColor = s.border;
-                    if (s.textColor) {
-                        cell.style.color = s.textColor;
-                        cell.querySelector('.day-number') && (cell.querySelector('.day-number').style.color = s.textColor);
-                    }
+                if (dayData.amount < 0) {
+                    cell.classList.add('minus');
+                } else {
+                    const s = getAmountStyle(dayData.amount);
+                    if (s) { cell.style.background = s.bg; cell.style.borderColor = s.border; }
                 }
             }
 
