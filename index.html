@@ -897,8 +897,19 @@
     document.getElementById('cancelBtn').addEventListener('click', closeModal);
     document.getElementById('closeModal').addEventListener('click', closeModal);
 
-    document.getElementById('amountInput').addEventListener('keypress', e => {
-        if (e.key === 'Enter') saveData();
+    document.getElementById('modal').addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            saveData();
+        }
+    });
+
+    document.getElementById('memoInput').addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            e.stopPropagation();
+            saveData();
+        }
     });
 
     document.getElementById('historyItems').addEventListener('click', e => {
